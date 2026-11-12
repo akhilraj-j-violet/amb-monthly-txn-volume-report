@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pandas as pd
@@ -29,8 +30,54 @@ def read_sheet(path: str | Path) -> pd.DataFrame:
         return pd.read_excel(path, header=None, sheet_name=0, engine="openpyxl")
     text = path.read_bytes().decode("utf-8-sig", errors="replace")
     if re.search(r"<\s*table", text, re.I):
-        return pd.read_html(io.StringIO(text), header=None)[0]
+        return _html_grid(text)
     return pd.read_csv(io.StringIO(text), header=None, sep=None, engine="python")
+
+
+class _TableParser(HTMLParser):
+    """Collect the first <table> as rows of cell text; <th> and <td> both count
+    as cells, so the header row is Excel row 1, as when Excel opens the file."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows: list[list[str]] = []
+        self._depth = 0
+        self._done = False
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag, attrs):
+        if self._done:
+            return
+        if tag == "table":
+            self._depth += 1
+        elif self._depth == 1 and tag == "tr":
+            self.rows.append([])
+        elif self._depth == 1 and tag in ("td", "th") and self.rows:
+            self._cell = []
+
+    def handle_endtag(self, tag):
+        if self._done:
+            return
+        if tag == "table":
+            self._depth -= 1
+            self._done = self._depth == 0
+        elif tag in ("td", "th") and self._cell is not None:
+            self.rows[-1].append(" ".join("".join(self._cell).split()))
+            self._cell = None
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            self._cell.append(data)
+
+
+def _html_grid(text: str) -> pd.DataFrame:
+    """Grid from an HTML table such as a SQL*Plus ``SET MARKUP HTML`` export."""
+    parser = _TableParser()
+    parser.feed(text)
+    rows = [r for r in parser.rows if r]
+    width = max((len(r) for r in rows), default=0)
+    grid = pd.DataFrame([r + [None] * (width - len(r)) for r in rows])
+    return grid.replace("", None)
 
 
 def cell_value(grid: pd.DataFrame, ref: str):

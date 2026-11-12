@@ -18,8 +18,15 @@ Base path:
 - `<Run Month>` is the folder for the month the report is run, e.g. `Nov 2026`.
   **It holds the previous month's data**: files in `Nov 2026` are tagged `OCT_2026`.
 - `<DB>` is `ARCH DB` or `LIV DB`. File names end in `_ARCH` or `_LIV` to match.
-- All files are `.xls` (Excel 97-2003) and about 2 KB each, so they hold small
-  extract results, not raw transaction dumps. Reading `.xls` with pandas needs `xlrd`.
+- Files are named `.xls` but are really **SQL\*Plus HTML reports**
+  (`SET MARKUP HTML ON`, generator "SQL*Plus 19.32.0"), about 1.3 KB each.
+  Each has one `<table>`: a `<th>` heading row, then one `<td>` data row.
+  Excel shows the heading as row 1, so A2/B2 are the first data row. The reader
+  must count the `<th>` row as row 1 (`pd.read_html` makes it the column header
+  instead, which shifts every cell; that bug was found and fixed with real files).
+- RTP1, RTP2 and FPX files have 2 columns: `Total Transaction`, `Total Amount`.
+  NAD and Mandate files have 1 column only: `Total Transaction` (no amount).
+- A NULL in SQL*Plus output is `&nbsp;`, e.g. `SUM()` over zero rows.
 - File name pattern: `<Name>_<MON>_<YYYY>_<DB>.xls`, e.g. `Settled_OCT_2026_ARCH.xls`.
 
 ### ARCH DB
@@ -69,15 +76,14 @@ Base path:
 - `Outgoing_NonSettled_OCT_2026_LIV.xls`
 - `Outgoing_Settled_OCT_2026_LIV.xls`
 
-No NAD or RTP1 folder has been shown for LIV DB. Confirm with the user whether
-they exist before assuming they do.
+LIV DB has no NAD or RTP1 folder (confirmed by the OCT 2026 zip the user sent).
 
 ### Summary of folders
 
 | DB | Products |
 |---|---|
 | ARCH DB | FPX (2), NAD (3), RTP1 (32), RTP2 (6) |
-| LIV DB | FPX (2), Mandate (4), RTP2 (6); NAD and RTP1 not confirmed |
+| LIV DB | FPX (2), Mandate (4), RTP2 (6) |
 
 ## Expected output: `TXN_count_RPP_and_Duitnow_<MON>_<YYYY>_CLIENT.xlsx`
 
@@ -111,7 +117,9 @@ Only the 16 input cells (C/D/F/G × rows 7–10 and 13–16) need filling. Rows
 Quirks in the sample:
 - `E18` reads just `T`, which looks like a typo for `Total CT SETTLED`.
 - `D9` (Outgoing DUITNOW AE NOT SETTLED amount) is 45,881,698,693,822.40,
-  far larger than every other figure. This may be a data issue in the source.
+  far larger than every other figure. The source file really contains
+  `45881698693822.41` (Excel shows `.40` because it keeps only 15 significant
+  digits), so the outlier comes from the extract query or data, not the tool.
 
 ### Results mapping (confirmed by the user, implemented in `txn_report/mapping.py`)
 
@@ -136,6 +144,7 @@ rows 17–20; F22 = C21+F21; G22 = D21+G21. The user's written mapping said
 `G22 = D21+G22`, which would be circular. The template's `=SUM(D21,G21)` is kept.
 
 ## Open questions
-- The input `.xls` files have not been seen yet. The A2/B2 layout comes from the
-  user's mapping. The reader detects real xls, xlsx, HTML and text formats.
+- Tested against the real OCT 2026 `01_Results` zip: the generated report
+  matches the client file in every cell except the E18 label fix and D9's
+  last digit (see above). Client input files are not committed.
 - Whether other products (FPX, NAD, RTP2, Mandate) get their own report or sheet.

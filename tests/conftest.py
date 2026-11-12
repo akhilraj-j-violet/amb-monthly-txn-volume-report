@@ -17,6 +17,43 @@ SAMPLE = {
 }
 
 
+SQLPLUS_HTML = """<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="generator" content="SQL*Plus 19.32.0">
+<title>SQL*Plus Report</title>
+</head>
+<body>
+<p>
+<table border='1' width='90%' align='center' summary='Script output'>
+<tr>
+<th scope="col">
+Total Transaction
+</th>
+<th scope="col">
+Total Amount
+</th>
+</tr>
+<tr>
+<td>
+{volume}
+</td>
+<td>
+{amount}
+</td>
+</tr>
+</table>
+<p>
+</body>
+</html>
+"""
+
+
+def write_sqlplus(path: Path, volume, amount):
+    """Same layout as the real extracts: SQL*Plus HTML saved as .xls."""
+    path.write_text(SQLPLUS_HTML.format(volume=volume, amount=amount))
+
+
 def write_xls(path: Path, volume, amount):
     wb = xlwt.Workbook()
     ws = wb.add_sheet("Sheet1")
@@ -29,14 +66,14 @@ def write_xls(path: Path, volume, amount):
 
 @pytest.fixture
 def results_dir(tmp_path):
-    """A full 01_Results tree for OCT_2026 with real .xls files."""
+    """A full 01_Results tree for OCT_2026 in the real SQL*Plus HTML format."""
     from txn_report.mapping import SOURCES
 
     root = tmp_path / "01_Results"
     for s in SOURCES:
         folder = root / s.db_folder / s.product
         folder.mkdir(parents=True, exist_ok=True)
-        write_xls(folder / f"{s.name_for('OCT_2026')}.xls", *SAMPLE[s.volume_cell])
+        write_sqlplus(folder / f"{s.name_for('OCT_2026')}.xls", *SAMPLE[s.volume_cell])
 
     # Unmapped files that live in the same tree must be ignored.
     rtp1 = root / "ARCH DB" / "RTP1"

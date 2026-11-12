@@ -126,14 +126,17 @@ def collect_values(root: str | Path, period: str) -> tuple[pd.DataFrame, list[st
                 status = "error"
                 warnings.append(f"ERROR reading {path.name}: {exc}")
             else:
-                if volume is None or amount is None:
-                    status = "empty"
+                if volume is None:
+                    status = "error"
+                    warnings.append(f"ERROR: {path.name} has no volume in {VOLUME_CELL}")
+                elif amount is None and volume == 0:
+                    # No transactions: SQL SUM() returns NULL, so B2 is blank.
+                    amount = 0.0
+                elif amount is None:
+                    status = "error"
                     warnings.append(
-                        f"EMPTY: {path.name} has no value in "
-                        f"{VOLUME_CELL if volume is None else AMOUNT_CELL}; treated as 0"
+                        f"ERROR: {path.name} has volume {volume:,.0f} but no amount in {AMOUNT_CELL}"
                     )
-                    volume = volume or 0.0
-                    amount = amount or 0.0
         rows.append({
             "direction": s.direction,
             "section": s.section,

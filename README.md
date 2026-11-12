@@ -41,13 +41,17 @@ what is wrong.
 
 ### Checks
 - A mapped file is missing or can't be read: the run stops.
-- A2 or B2 is empty: treated as 0, with a warning.
+- A2 (volume) is empty, or B2 (amount) is empty while the volume isn't 0: the run stops.
+- Volume 0 with an empty amount (SQL `SUM` of no rows): the amount is taken as 0.
 - A value is negative, a volume isn't a whole number, an amount has no volume,
   or the average amount per transaction is unusually high: a warning is shown.
 
 ### Input file formats
-Files named `.xls` may really be Excel 97-2003, Excel 2007+, an HTML table or
-tab/comma-separated text. The format is detected from the file's contents.
+The extracts are **SQL\*Plus HTML reports saved with a `.xls` name**. Excel
+opens them as a sheet where row 1 is the heading row (`Total Transaction`,
+`Total Amount`) and row 2 holds the values. The tool reads them the same way.
+Real Excel 97-2003, Excel 2007+ and tab/comma-separated text files are also
+accepted; the format is detected from the file's contents, not its extension.
 
 ## Changing the mapping
 The file → cell mapping is in `txn_report/mapping.py`. The report layout is
