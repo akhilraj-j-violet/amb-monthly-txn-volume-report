@@ -45,8 +45,29 @@ Base path:
 - `Not_Settled_OCT_2026_LIV.xls`
 - `Settled_OCT_2026_LIV.xls`
 
-Other LIV DB product folders (NAD, RTP1, RTP2) have not been shown yet. Assume
-they mirror ARCH DB with an `_LIV` suffix, but confirm with the user.
+**Mandate** (4 files; this folder exists only in LIV DB, not in ARCH DB)
+- `Incoming_NonSettled_OCT_2026_LIV.xls`
+- `Incoming_Settled_OCT_2026_LIV.xls`
+- `Outgoing_NonSettled_OCT_2026_LIV.xls`
+- `Outgoing_Settled_OCT_2026_LIV.xls`
+
+**RTP2** (6 files, same set as ARCH DB RTP2)
+- `Incoming_NonSettled_OCT_2026_LIV.xls`
+- `Incoming_NonSettled_PAYNET_OCT_2026_LIV.xls`
+- `Incoming_Settled_OCT_2026_LIV.xls`
+- `Incoming_Settled_PAYNET_OCT_2026_LIV.xls`
+- `Outgoing_NonSettled_OCT_2026_LIV.xls`
+- `Outgoing_Settled_OCT_2026_LIV.xls`
+
+No NAD or RTP1 folder has been shown for LIV DB. Confirm with the user whether
+they exist before assuming they do.
+
+### Summary of folders
+
+| DB | Products |
+|---|---|
+| ARCH DB | FPX (2), NAD (3), RTP1 (32), RTP2 (6) |
+| LIV DB | FPX (2), Mandate (4), RTP2 (6); NAD and RTP1 not confirmed |
 
 ## Open questions
 - The column layout inside the `.xls` files is still unknown. Ask for a sample
