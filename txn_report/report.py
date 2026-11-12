@@ -13,7 +13,7 @@ from .mapping import AMOUNT_CELL, SOURCES, TOTAL_ROWS, VOLUME_CELL, Source
 from .reader import cell_value, read_sheet, to_number
 
 TEMPLATE = Path(__file__).parent / "templates" / "TXN_count_RPP_and_Duitnow_TEMPLATE.xlsx"
-OUTPUT_NAME = "TXN_count_RPP_and_Duitnow_{period}_CLIENT.xlsx"
+OUTPUT_NAME = "amb_txn_count_rpp_{period}.xlsx"
 EXTENSIONS = (".xls", ".xlsx")
 
 MONTHS = {
