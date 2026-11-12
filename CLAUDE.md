@@ -83,7 +83,7 @@ they exist before assuming they do.
 
 The user supplied `TXN_count_RPP_and_Duitnow_OCT_2026_CLIENT.xlsx` as the
 target format. A blank copy, with all formatting kept and the input numbers
-cleared, is in `templates/TXN_count_RPP_and_Duitnow_TEMPLATE.xlsx`.
+cleared, is in `txn_report/templates/TXN_count_RPP_and_Duitnow_TEMPLATE.xlsx`.
 The client figures themselves are not committed.
 
 - One sheet, named `<MONTHNAME>_<YYYY>` (e.g. `OCTOBER_2026`). The full month
