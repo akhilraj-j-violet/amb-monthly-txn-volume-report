@@ -1,5 +1,15 @@
 # Project memory: AMB monthly transaction volume report
 
+## Input rules (confirmed by the user)
+
+- **`01_Results` is the root input directory.** The tool should take this folder
+  as its input and scan every `<DB>/<Product>/` subfolder under it for Excel files.
+- **File names are fixed every month. Only the month/year part changes**, e.g.
+  `Settled_OCT_2026_ARCH.xls` next month becomes `Settled_NOV_2026_ARCH.xls`.
+  Match files by the fixed name with the `<MON>_<YYYY>` part treated as a
+  variable, and read the data month from the file name.
+- The file lists below use `OCT_2026` as the example month.
+
 ## Source file layout (OneDrive)
 
 Base path:
