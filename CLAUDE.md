@@ -113,12 +113,29 @@ Quirks in the sample:
 - `D9` (Outgoing DUITNOW AE NOT SETTLED amount) is 45,881,698,693,822.40,
   far larger than every other figure. This may be a data issue in the source.
 
-The mapping from input files to the 16 cells is still to come from the user.
-Do not guess it. It probably uses RTP1 (`DuitAE`/`DuitCT` → DUITNOW,
-`QR_AE`/`QR_CT` → RPPQR), but it is unconfirmed how the `_PACS`/`_PRXY` files fit.
+### Results mapping (confirmed by the user, implemented in `txn_report/mapping.py`)
+
+Every input file has **volume in A2 and amount in B2** (row 1 is a header).
+All 16 inputs come from `ARCH DB/RTP1`. The `_PACS` and `_PRXY` files are **not** used.
+
+| Report cells (vol/amt) | Outgoing file | Report cells (vol/amt) | Incoming file |
+|---|---|---|---|
+| C7/D7 | Outgoing_Settled_DuitAE | F7/G7 | Incoming_Settled_DuitAE |
+| C8/D8 | Outgoing_Settled_DuitCT | F8/G8 | Incoming_Settled_DuitCT |
+| C9/D9 | Outgoing_NonSettled_DuitAE | F9/G9 | Incoming_NonSettled_DuitAE |
+| C10/D10 | Outgoing_NonSettled_DuitCT | F10/G10 | Incoming_NonSettled_DuitCT |
+| C13/D13 | Outgoing_Settled_QR_AE | F13/G13 | Incoming_Settled_QR_AE |
+| C14/D14 | Outgoing_Settled_QR_CT | F14/G14 | Incoming_Settled_QR_CT |
+| C15/D15 | Outgoing_NonSettled_QR_AE | F15/G15 | Incoming_NonSettled_QR_AE |
+| C16/D16 | Outgoing_NonSettled_QR_CT | F16/G16 | Incoming_NonSettled_QR_CT |
+
+(File names all end in `_<MON>_<YYYY>_ARCH`.)
+
+Formulas: rows 17–20 = DUITNOW + RPPQR (e.g. C17 = C7+C13); row 21 = sum of
+rows 17–20; F22 = C21+F21; G22 = D21+G21. The user's written mapping said
+`G22 = D21+G22`, which would be circular. The template's `=SUM(D21,G21)` is kept.
 
 ## Open questions
-- The column layout inside the input `.xls` files is still unknown. Ask for a
-  sample before building the parser.
-- Results mapping: input file → output cell (the user will provide it).
+- The input `.xls` files have not been seen yet. The A2/B2 layout comes from the
+  user's mapping. The reader detects real xls, xlsx, HTML and text formats.
 - Whether other products (FPX, NAD, RTP2, Mandate) get their own report or sheet.

@@ -1,16 +1,7 @@
-# Monthly Transaction Volume Report
+# Monthly RPP / DuitNow Transaction Volume Report
 
-A small Python + pandas tool that turns a raw transactions file into a monthly
-summary report (Excel workbook, optional CSVs, and a console printout).
-
-## What the report contains
-
-| Sheet | Contents |
-|---|---|
-| **Overview** | Period covered, total count/amount, averages, busiest and top-value months |
-| **Monthly Summary** | Per month: `txn_count`, `total_amount`, `avg/min/max_amount`, month-over-month % change for count and amount, share of total amount. Empty months inside the range show as 0. |
-| **By `<col>`** | Month × group stats (one per `--group-by` column) |
-| **`<col>` Count Pivot / Amount Pivot** | Wide month × group tables with row/column totals |
+Builds `TXN_count_RPP_and_Duitnow_<MON>_<YYYY>_CLIENT.xlsx` from the monthly
+`01_Results` extract folder, using pandas.
 
 ## Setup
 
@@ -20,48 +11,47 @@ pip install -r requirements.txt
 
 ## Usage
 
-```bash
-python -m txn_report transactions.csv -o reports/monthly_summary.xlsx
-```
-
-Common options:
-
-| Option | Default | Description |
-|---|---|---|
-| `--date-col` | `txn_date` | Transaction date column |
-| `--amount-col` | `amount` | Amount column (`"1,234.50"`, `"$12"` are cleaned automatically) |
-| `--date-format` | inferred | Explicit format, e.g. `%d/%m/%Y` |
-| `--group-by COL ...` | none | Break down by one or more columns (e.g. `channel txn_type`) |
-| `--status-col` | none | Keep only rows whose status is in `--success-values` |
-| `--success-values` | `SUCCESS` | Case-insensitive list of statuses to keep |
-| `--start` / `--end` | none | Inclusive date range filter (`YYYY-MM-DD`) |
-| `--csv-dir DIR` | none | Also write each table as a CSV |
-| `--sheet` | `0` | Sheet name/index when the input is Excel |
-| `-q` | off | Don't print the summary to the console |
-
-Input can be `.csv`, `.xlsx`/`.xls`, or `.parquet`. Rows with unparseable dates
-or amounts are dropped.
-
-### Try it with sample data
+Point the tool at the month's `01_Results` folder:
 
 ```bash
-python sample_data/generate_sample.py
+python -m txn_report "C:\...\Monthly Volume Reports\Nov 2026\01_Results" -o "C:\...\Reports"
 ```
 
-```bash
-python -m txn_report sample_data/transactions.csv --group-by channel txn_type --status-col status -o reports/sample.xlsx
-```
+The tool then:
+1. Works out the data month from the file names (e.g. `OCT_2026`). Use
+   `--month OCT_2026` if files for more than one month are in the folder.
+2. Opens the 16 mapped files in `ARCH DB/RTP1/` and reads **A2 = volume** and
+   **B2 = amount** from each.
+3. Fills cells C/D/F/G of rows 7–10 (DUITNOW) and 13–16 (RPPQR) in the report
+   template. The total rows 17–22 stay as Excel formulas.
+4. Names the sheet `OCTOBER_2026` and sets the title to
+   `TRANSACTION VOLUME - OCTOBER_2026`.
+5. Prints every input value and the totals, plus warnings.
 
-### Use from Python
+| Option | Meaning |
+|---|---|
+| `-o, --output-dir` | Where to save the report (default: current folder) |
+| `-m, --month` | Data month, e.g. `OCT_2026`, `2026-10`, `October 2026` |
+| `--allow-missing` | Build even if mapped files are missing (their cells stay blank) |
+| `--max-avg-amount` | Warn when amount ÷ volume is above this (default 1,000,000) |
+| `-q` | Print only warnings and the output path |
 
-```python
-from txn_report import ReportConfig, build_report, load_transactions, write_excel
+Without `--allow-missing`, a missing or unreadable file stops the run and lists
+what is wrong.
 
-df = load_transactions("transactions.csv")
-report = build_report(df, ReportConfig(group_by=["channel"], status_col="status"))
-print(report["Monthly Summary"])
-write_excel(report, "monthly_summary.xlsx")
-```
+### Checks
+- A mapped file is missing or can't be read: the run stops.
+- A2 or B2 is empty: treated as 0, with a warning.
+- A value is negative, a volume isn't a whole number, an amount has no volume,
+  or the average amount per transaction is unusually high: a warning is shown.
+
+### Input file formats
+Files named `.xls` may really be Excel 97-2003, Excel 2007+, an HTML table or
+tab/comma-separated text. The format is detected from the file's contents.
+
+## Changing the mapping
+The file → cell mapping is in `txn_report/mapping.py`. The report layout is
+`txn_report/templates/TXN_count_RPP_and_Duitnow_TEMPLATE.xlsx`.
 
 ## Tests
 
