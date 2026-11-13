@@ -6,3 +6,5 @@ __pycache__/
 reports/
 sample_data/transactions.csv
 !txn_report/templates/*.xlsx
+logs/
+*.log

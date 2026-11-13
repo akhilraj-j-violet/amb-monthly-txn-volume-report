@@ -66,6 +66,28 @@ SOURCES: list[Source] = [
     _rtp1("Incoming", "NonSettled", "QR_CT",  "F16", "G16", "RPPQR",   "CT NOT SETTLED"),
 ]
 
-# Formula rows in the template, reproduced in pandas for the console check.
-# Each total line = DUITNOW row + RPPQR row.
-TOTAL_ROWS = {17: (7, 13), 18: (8, 14), 19: (9, 15), 20: (10, 16)}
+# --------------------------------------------------------------------------- #
+# Calculated cells (rows 17-22). The tool works these out itself with exact
+# decimal arithmetic and writes plain numbers; the report holds no formulas.
+# Order matters: later cells use earlier ones.
+# --------------------------------------------------------------------------- #
+TOTAL_LABELS = {
+    17: "Total AE SETTLED", 18: "Total CT SETTLED",
+    19: "Total AE NOT SETTLED", 20: "Total CT NOT SETTLED",
+    21: "Total Outgoing / Total Incoming",
+    22: "Grand Total : Total Outgoing + Total Incoming",
+}
+
+CALCULATIONS: list[tuple[str, tuple[str, ...]]] = []
+# Rows 17-20: DUITNOW line + RPPQR line (e.g. C17 = C7 + C13).
+for _row, (_duit, _qr) in {17: (7, 13), 18: (8, 14), 19: (9, 15), 20: (10, 16)}.items():
+    for _col in "CDFG":
+        CALCULATIONS.append((f"{_col}{_row}", (f"{_col}{_duit}", f"{_col}{_qr}")))
+# Row 21: Total Outgoing (C, D) / Total Incoming (F, G) = rows 17-20.
+for _col in "CDFG":
+    CALCULATIONS.append((f"{_col}21", tuple(f"{_col}{r}" for r in range(17, 21))))
+# Row 22: Grand Total = Total Outgoing + Total Incoming.
+CALCULATIONS.append(("F22", ("C21", "F21")))   # volume
+CALCULATIONS.append(("G22", ("D21", "G21")))   # amount
+
+VOLUME_COLUMNS = {"C", "F"}

@@ -85,7 +85,7 @@ LIV DB has no NAD or RTP1 folder (confirmed by the OCT 2026 zip the user sent).
 | ARCH DB | FPX (2), NAD (3), RTP1 (32), RTP2 (6) |
 | LIV DB | FPX (2), Mandate (4), RTP2 (6) |
 
-## Expected output: `TXN_count_RPP_and_Duitnow_<MON>_<YYYY>_CLIENT.xlsx`
+## Expected output: `amb_txn_count_rpp_<MON>_<YYYY>.xlsx` (was `TXN_count_RPP_and_Duitnow_<MON>_<YYYY>_CLIENT.xlsx`)
 
 The user supplied `TXN_count_RPP_and_Duitnow_OCT_2026_CLIENT.xlsx` as the
 target format. A blank copy, with all formatting kept and the input numbers
@@ -111,8 +111,16 @@ The client figures themselves are not committed.
 | 21 | `=SUM(rows 17:20)` | Total Outgoing / Total Incoming |
 | 22 | `F22 = C21+F21` (volume), `G22 = D21+G21` (amount) | Grand Total : Total Outgoing + Total Incoming |
 
-Only the 16 input cells (C/D/F/G × rows 7–10 and 13–16) need filling. Rows
-17–22 are formulas and must be left as they are.
+**The report must contain no formulas (user request).** The tool fills the 16
+input cells and calculates rows 17–22 itself (`CALCULATIONS` in
+`txn_report/mapping.py`, done with exact `Decimal` arithmetic), then writes plain
+numbers. The user maintains the template themselves (they uploaded a new one
+with E18 fixed; it still has formulas), so `write_report` clears every formula
+in the template at run time instead of relying on a formula-free template.
+Output file name is `OUTPUT_NAME` in `txn_report/report.py`; the user changed
+it to `amb_txn_count_rpp_{period}.xlsx`. Keep their edits. Volumes are written as ints and
+amounts as floats; Excel shows only 15 significant digits, so the tool logs the
+exact value for any cell with more digits.
 
 Quirks in the sample:
 - `E18` reads just `T`, which looks like a typo for `Total CT SETTLED`.
@@ -139,9 +147,15 @@ All 16 inputs come from `ARCH DB/RTP1`. The `_PACS` and `_PRXY` files are **not*
 
 (File names all end in `_<MON>_<YYYY>_ARCH`.)
 
-Formulas: rows 17–20 = DUITNOW + RPPQR (e.g. C17 = C7+C13); row 21 = sum of
-rows 17–20; F22 = C21+F21; G22 = D21+G21. The user's written mapping said
-`G22 = D21+G22`, which would be circular. The template's `=SUM(D21,G21)` is kept.
+Calculations: rows 17–20 = DUITNOW + RPPQR (e.g. C17 = C7+C13); row 21 = sum
+of rows 17–20; F22 = C21+F21; G22 = D21+G21. The user's written mapping said
+`G22 = D21+G22`, which would be circular; D21+G21 is used.
+
+## Logging (user request)
+Every run writes `<output dir>/logs/txn_report_<YYYYMMDD_HHMMSS>.log`
+(`--log-dir`, `--log-level`). See `txn_report/logs.py`. Use the `txn_report`
+logger for any new messages; the file gets DEBUG detail (raw cell values, each
+calculation), the console gets INFO.
 
 ## Open questions
 - Tested against the real OCT 2026 `01_Results` zip: the generated report

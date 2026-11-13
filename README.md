@@ -1,6 +1,6 @@
 # Monthly RPP / DuitNow Transaction Volume Report
 
-Builds `TXN_count_RPP_and_Duitnow_<MON>_<YYYY>_CLIENT.xlsx` from the monthly
+Builds `amb_txn_count_rpp_<MON>_<YYYY>.xlsx` (e.g. `amb_txn_count_rpp_OCT_2026.xlsx`) from the monthly
 `01_Results` extract folder, using pandas.
 
 ## Setup
@@ -23,10 +23,38 @@ The tool then:
 2. Opens the 16 mapped files in `ARCH DB/RTP1/` and reads **A2 = volume** and
    **B2 = amount** from each.
 3. Fills cells C/D/F/G of rows 7–10 (DUITNOW) and 13–16 (RPPQR) in the report
-   template. The total rows 17–22 stay as Excel formulas.
+   template, then **calculates the totals in rows 17–22 itself** and writes
+   them as plain numbers. The report contains no formulas.
 4. Names the sheet `OCTOBER_2026` and sets the title to
    `TRANSACTION VOLUME - OCTOBER_2026`.
-5. Prints every input value and the totals, plus warnings.
+5. Writes a log file for every run (see **Logs** below).
+
+### Calculations
+The values are read from the files as text and added with Python's `Decimal`
+type, so the sums are exact (no floating-point rounding):
+
+| Cells | Calculation |
+|---|---|
+| C17:G20 | DUITNOW + RPPQR for each line, e.g. `C17 = C7 + C13` |
+| C21, D21, F21, G21 | Total Outgoing / Incoming = rows 17 + 18 + 19 + 20 |
+| F22 | Grand total volume = C21 + F21 |
+| G22 | Grand total amount = D21 + G21 |
+
+Excel can only store 15 significant digits. If a value has more (e.g. October's
+D9 = 45,881,698,693,822.41), Excel shows the last digit as 0, so the tool logs
+a warning with the exact value.
+
+### Logs
+Each run creates `logs/txn_report_<YYYYMMDD_HHMMSS>.log` inside the output
+folder (change it with `--log-dir`). The log contains:
+- the command, input folder and detected month,
+- each file read, its raw A2/B2 text and the values used,
+- every calculation (e.g. `C17 = C7 + C13 = 14,115,252`),
+- all warnings and errors (with full details if something crashes),
+- the input and totals tables and the output file path.
+
+The console shows the same information without the DEBUG details. Use `-q`
+to see only warnings and errors there; the log file still gets everything.
 
 | Option | Meaning |
 |---|---|
@@ -34,7 +62,9 @@ The tool then:
 | `-m, --month` | Data month, e.g. `OCT_2026`, `2026-10`, `October 2026` |
 | `--allow-missing` | Build even if mapped files are missing (their cells stay blank) |
 | `--max-avg-amount` | Warn when amount ÷ volume is above this (default 1,000,000) |
-| `-q` | Print only warnings and the output path |
+| `--log-dir` | Folder for log files (default: `logs` inside the output folder) |
+| `--log-level` | Detail in the log file: `DEBUG` (default), `INFO` or `WARNING` |
+| `-q` | Console shows only warnings, errors and the output path |
 
 Without `--allow-missing`, a missing or unreadable file stops the run and lists
 what is wrong.
@@ -53,9 +83,15 @@ opens them as a sheet where row 1 is the heading row (`Total Transaction`,
 Real Excel 97-2003, Excel 2007+ and tab/comma-separated text files are also
 accepted; the format is detected from the file's contents, not its extension.
 
+## Changing the output file name
+Edit `OUTPUT_NAME` near the top of `txn_report/report.py`. Keep `{period}` in
+it; it becomes the data month, e.g. `OCT_2026`.
+
 ## Changing the mapping
 The file → cell mapping is in `txn_report/mapping.py`. The report layout is
-`txn_report/templates/TXN_count_RPP_and_Duitnow_TEMPLATE.xlsx`.
+`txn_report/templates/TXN_count_RPP_and_Duitnow_TEMPLATE.xlsx`. You can edit
+the template's look in Excel; any formulas in it are removed when the report is
+written, because the tool calculates rows 17–22 itself.
 
 ## Tests
 

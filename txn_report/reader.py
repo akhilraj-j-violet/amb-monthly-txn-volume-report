@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import re
+from decimal import Decimal, InvalidOperation
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -90,13 +91,25 @@ def cell_value(grid: pd.DataFrame, ref: str):
     return None if pd.isna(value) else value
 
 
-def to_number(value) -> float | None:
-    """Convert a cell value to a number; strips commas, spaces and currency text."""
+def to_number(value) -> Decimal | None:
+    """Convert a cell value to an exact Decimal.
+
+    Text such as ``"45881698693822.41"`` is converted digit for digit (no float
+    rounding). Commas, spaces and currency text are stripped first.
+    """
     if value is None:
         return None
-    if isinstance(value, (int, float)):
-        return float(value)
+    if isinstance(value, bool):
+        raise ValueError(f"unexpected boolean cell value {value!r}")
+    if isinstance(value, int):
+        return Decimal(value)
+    if isinstance(value, float):
+        # repr() gives the shortest text that round-trips, e.g. 99.1 -> "99.1".
+        return Decimal(repr(value))
     cleaned = re.sub(r"[^0-9.\-]", "", str(value))
     if cleaned in {"", "-", ".", "-."}:
         return None
-    return float(cleaned)
+    try:
+        return Decimal(cleaned)
+    except InvalidOperation:
+        raise ValueError(f"not a number: {value!r}") from None
