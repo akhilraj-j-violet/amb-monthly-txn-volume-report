@@ -151,6 +151,18 @@ Calculations: rows 17–20 = DUITNOW + RPPQR (e.g. C17 = C7+C13); row 21 = sum
 of rows 17–20; F22 = C21+F21; G22 = D21+G21. The user's written mapping said
 `G22 = D21+G22`, which would be circular; D21+G21 is used.
 
+## Source notes (user request)
+Every value cell (32 copied cells + 22 totals) gets a plain-language Excel note
+saying where its value comes from (folder, file, cell A2/B2) or how it is
+added up. Texts are generated from `SOURCES`/`CALCULATIONS` in
+`txn_report/hints.py`, so they stay correct if the mapping changes. B24/B25
+hold a visible tip line. The template carries the same notes with
+`<MON>_<YYYY>`; the report gets the real month. `--no-hints` removes them.
+The template no longer contains formulas (cleared after the user's upload).
+
+The template footer `# Classified as Confidential` comes from the user's
+template (a sensitivity label); keep it.
+
 ## Logging (user request)
 Every run writes `<output dir>/logs/txn_report_<YYYYMMDD_HHMMSS>.log`
 (`--log-dir`, `--log-level`). See `txn_report/logs.py`. Use the `txn_report`

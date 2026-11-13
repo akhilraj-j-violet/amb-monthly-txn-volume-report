@@ -30,6 +30,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Build the report even if some input files are missing")
     p.add_argument("--max-avg-amount", type=float, default=DEFAULT_MAX_AVG_AMOUNT,
                    help="Warn when amount / volume exceeds this (default: %(default)s)")
+    p.add_argument("--no-hints", action="store_true",
+                   help="Leave out the notes that explain where each number comes from")
     p.add_argument("--log-dir",
                    help="Folder for log files (default: 'logs' inside the output folder)")
     p.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING"],
@@ -56,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     log.info("Log file: %s", log_file)
     try:
         result = build(args.results_dir, out_dir, args.month,
-                       args.allow_missing, args.max_avg_amount)
+                       args.allow_missing, args.max_avg_amount,
+                       hints=not args.no_hints)
     except ReportError as exc:
         log.error("Report NOT created: %s", exc)
         print(f"See log: {log_file}", file=sys.stderr)

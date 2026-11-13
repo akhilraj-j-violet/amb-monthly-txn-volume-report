@@ -152,3 +152,26 @@ def test_blank_values_stop_the_run(results_dir, tmp_path, volume, amount):
                   volume, amount)
     with pytest.raises(ReportError, match="Outgoing_Settled_DuitCT"):
         build(results_dir, tmp_path)
+
+
+def test_source_notes(results_dir, tmp_path):
+    result = build(results_dir, tmp_path)
+    ws = load_workbook(result.output).active
+    note = ws["C7"].comment.text
+    assert "ARCH DB > RTP1" in note
+    assert "Outgoing_Settled_DuitAE_OCT_2026_ARCH.xls" in note and "cell A2" in note
+    assert "cell B2" in ws["G16"].comment.text
+    assert "DuitNow AE settled (D7)" in ws["D17"].comment.text
+    assert "RPPQR AE settled (D13)" in ws["D17"].comment.text
+    assert "Total outgoing (D21)" in ws["G22"].comment.text
+    # Every value cell (32 copied from 16 files + 22 totals) has a note.
+    assert sum(1 for r in ws.iter_rows() for c in r if c.comment) == 54
+    assert "hover over any number" in ws["B24"].value
+    assert "OCT_2026" in ws["B25"].value
+
+
+def test_no_hints_option(results_dir, tmp_path):
+    assert main([str(results_dir), "-o", str(tmp_path), "--no-hints", "-q"]) == 0
+    ws = load_workbook(next(tmp_path.glob("*.xlsx"))).active
+    assert not any(c.comment for r in ws.iter_rows() for c in r)
+    assert ws["B24"].value is None and ws["B25"].value is None

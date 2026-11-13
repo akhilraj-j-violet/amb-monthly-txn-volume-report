@@ -29,6 +29,26 @@ The tool then:
    `TRANSACTION VOLUME - OCTOBER_2026`.
 5. Writes a log file for every run (see **Logs** below).
 
+### Notes explaining each number
+Every number in the report has an Excel note (hover over the cell; cells
+with a note show a small red triangle). The note says in plain words where
+the value comes from, for example:
+
+```
+Outgoing DuitNow, AE settled: number of transactions.
+
+Where it comes from:
+Folder: 01_Results > ARCH DB > RTP1
+File: Outgoing_Settled_DuitAE_OCT_2026_ARCH.xls
+Value: cell A2 (column 'Total Transaction').
+```
+
+Totals explain their sum instead, e.g. `DuitNow AE settled (D7) + RPPQR AE
+settled (D13)`. Two lines under the table (B24, B25) tell readers about the
+notes. Use `--no-hints` to leave the notes and these lines out, for example
+when sending the report to someone who doesn't need them. The note texts are
+written in `txn_report/hints.py`.
+
 ### Calculations
 The values are read from the files as text and added with Python's `Decimal`
 type, so the sums are exact (no floating-point rounding):
@@ -62,6 +82,7 @@ to see only warnings and errors there; the log file still gets everything.
 | `-m, --month` | Data month, e.g. `OCT_2026`, `2026-10`, `October 2026` |
 | `--allow-missing` | Build even if mapped files are missing (their cells stay blank) |
 | `--max-avg-amount` | Warn when amount ÷ volume is above this (default 1,000,000) |
+| `--no-hints` | Leave out the notes explaining where each number comes from |
 | `--log-dir` | Folder for log files (default: `logs` inside the output folder) |
 | `--log-level` | Detail in the log file: `DEBUG` (default), `INFO` or `WARNING` |
 | `-q` | Console shows only warnings, errors and the output path |

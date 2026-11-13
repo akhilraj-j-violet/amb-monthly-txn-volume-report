@@ -13,6 +13,7 @@ from openpyxl import load_workbook
 
 from .mapping import (AMOUNT_CELL, CALCULATIONS, SOURCES, TOTAL_LABELS,
                       VOLUME_CELL, VOLUME_COLUMNS, Source)
+from .hints import apply_hints, remove_hints
 from .reader import cell_value, read_sheet, to_number
 
 log = logging.getLogger("txn_report")
@@ -235,7 +236,7 @@ def _excel_number(cell: str, value: Decimal):
 
 
 def write_report(values: pd.DataFrame, cells: dict[str, Decimal], period: str,
-                 output: Path, template: Path = TEMPLATE) -> Path:
+                 output: Path, template: Path = TEMPLATE, hints: bool = True) -> Path:
     """Fill the template with the 16 inputs and the calculated totals (no formulas)."""
     wb = load_workbook(template)
     ws = wb.worksheets[0]
@@ -265,6 +266,12 @@ def write_report(values: pd.DataFrame, cells: dict[str, Decimal], period: str,
                         "display %s. Exact value: %s", ref, digits, EXCEL_DIGITS,
                         f"{float(f'{value:.{EXCEL_DIGITS}g}'):,.2f}", f"{value:,}")
 
+    if hints:
+        apply_hints(ws, period)
+        log.info("Added source notes to the value cells")
+    else:
+        remove_hints(ws)
+
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)
     log.info("Report written to %s", output)
@@ -274,7 +281,7 @@ def write_report(values: pd.DataFrame, cells: dict[str, Decimal], period: str,
 def build(root: str | Path, output_dir: str | Path | None = None,
           period: str | None = None, allow_missing: bool = False,
           max_avg_amount: float = DEFAULT_MAX_AVG_AMOUNT,
-          output_name: str = OUTPUT_NAME) -> ReportResult:
+          output_name: str = OUTPUT_NAME, hints: bool = True) -> ReportResult:
     """Read the 01_Results folder and write the client report."""
     root = Path(root)
     log.info("Input folder: %s", root)
@@ -298,5 +305,6 @@ def build(root: str | Path, output_dir: str | Path | None = None,
     result = ReportResult(period, values, totals_table(cells), cells, warnings)
     out_dir = Path(output_dir) if output_dir else Path.cwd()
     result.output = write_report(values, cells, period,
-                                 out_dir / output_name.format(period=period))
+                                 out_dir / output_name.format(period=period),
+                                 hints=hints)
     return result
