@@ -3,18 +3,81 @@
 Builds `amb_txn_count_rpp_<MON>_<YYYY>.xlsx` (e.g. `amb_txn_count_rpp_OCT_2026.xlsx`) from the monthly
 `01_Results` extract folder, using pandas.
 
-## Setup
+## Running on Windows
 
-```bash
-pip install -r requirements.txt
+### Which command does your PC have?
+Open PowerShell and run both of these:
 ```
+py --version
+python --version
+```
+- **`py` shows a version** (e.g. `Python 3.14.5`): follow **Option A**.
+- **Only `python` shows a version**: follow **Option B**.
+- **Both show a version**: either option works.
+- **Neither works**, or `python` says *"Python was not found ... Microsoft
+  Store"*: install Python from https://www.python.org/downloads/ (tick
+  **Add python.exe to PATH** on the first screen), open a new PowerShell
+  window and check again.
 
-## Usage
+`py` is the Python Launcher for Windows: it finds Python from the Windows
+registry, so it works even when Python is not on PATH. `python` only works when
+Python's folder is on PATH; otherwise Windows runs a Microsoft Store placeholder
+that just prints a message.
 
-Point the tool at the month's `01_Results` folder:
+### Easiest: run_report.bat (any machine)
+`run_report.bat` checks which of `py` / `python` works, installs the libraries
+the first time, and runs the report.
+- **Double-click it**, paste the path of the `01_Results` folder and press
+  Enter. The report and a `logs` folder are saved on your Desktop.
+- Or run it from PowerShell, in the tool's folder, with any options:
+  ```
+  .\run_report.bat "C:\...\Monthly Volume Reports\Nov 2026\01_Results" -o "C:\Reports"
+  ```
+
+### Option A: machines with `py`
+In PowerShell, in the tool's folder (the one containing `requirements.txt`):
+
+1. Install the libraries (first time only):
+   ```
+   py -m pip install -r requirements.txt
+   ```
+2. Run the report:
+   ```
+   py -m txn_report "C:\...\Monthly Volume Reports\Nov 2026\01_Results" -o "$HOME\Desktop"
+   ```
+
+### Option B: machines with `python`
+In PowerShell, in the tool's folder:
+
+1. Install the libraries (first time only):
+   ```
+   python -m pip install -r requirements.txt
+   ```
+2. Run the report:
+   ```
+   python -m txn_report "C:\...\Monthly Volume Reports\Nov 2026\01_Results" -o "$HOME\Desktop"
+   ```
+
+### Tips
+- Get the folder path by opening `01_Results` in File Explorer, clicking the
+  address bar and copying it. Keep the quotes around paths, because they
+  contain spaces.
+- In Command Prompt (cmd) instead of PowerShell, write
+  `"%USERPROFILE%\Desktop"` instead of `"$HOME\Desktop"`.
+- Use `python -m pip` / `py -m pip`, not plain `pip`: plain `pip` is usually
+  not on PATH and gives *"The term 'pip' is not recognized"*.
+- A yellow warning that scripts are *"installed in ... which is not on PATH"*
+  during installation is harmless.
+- If OneDrive files show only a cloud icon and can't be read, right-click
+  `01_Results` and choose **Always keep on this device**.
+
+## Usage (all options)
+
+Point the tool at the month's `01_Results` folder (use `py` or `python` as
+above):
 
 ```bash
-python -m txn_report "C:\...\Monthly Volume Reports\Nov 2026\01_Results" -o "C:\...\Reports"
+python -m txn_report "<path to 01_Results>" -o "<output folder>"
 ```
 
 The tool then:
