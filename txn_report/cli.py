@@ -31,7 +31,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--max-avg-amount", type=float, default=DEFAULT_MAX_AVG_AMOUNT,
                    help="Warn when amount / volume exceeds this (default: %(default)s)")
     p.add_argument("--no-hints", action="store_true",
-                   help="Leave out the notes that explain where each number comes from")
+                   help="Leave out the DATA SOURCES box under the table")
     p.add_argument("--log-dir",
                    help="Folder for log files (default: 'logs' inside the output folder)")
     p.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING"],

@@ -154,24 +154,43 @@ def test_blank_values_stop_the_run(results_dir, tmp_path, volume, amount):
         build(results_dir, tmp_path)
 
 
-def test_source_notes(results_dir, tmp_path):
+def _texts(ws, first_row=24):
+    return [c.value for r in ws.iter_rows(min_row=first_row) for c in r if c.value]
+
+
+def test_source_box(results_dir, tmp_path):
     result = build(results_dir, tmp_path)
     ws = load_workbook(result.output).active
-    note = ws["C7"].comment.text
-    assert "ARCH DB > RTP1" in note
-    assert "Outgoing_Settled_DuitAE_OCT_2026_ARCH.xls" in note and "cell A2" in note
-    assert "cell B2" in ws["G16"].comment.text
-    assert "DuitNow AE settled (D7)" in ws["D17"].comment.text
-    assert "RPPQR AE settled (D13)" in ws["D17"].comment.text
-    assert "Total outgoing (D21)" in ws["G22"].comment.text
-    # Every value cell (32 copied from 16 files + 22 totals) has a note.
-    assert sum(1 for r in ws.iter_rows() for c in r if c.comment) == 54
-    assert "hover over any number" in ws["B24"].value
-    assert "OCT_2026" in ws["B25"].value
+    # No hover notes any more.
+    assert not any(c.comment for r in ws.iter_rows() for c in r)
+    texts = _texts(ws)
+    assert texts[0].startswith("DATA SOURCES")
+    # The user's exact format, no month or year in the file names.
+    assert "AE SETTLED VOLUME - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/volume" in texts
+    assert "AE SETTLED AMOUNT - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/Amount" in texts
+    assert "CT SETTLED VOLUME - ARCH/RTP1/Outgoing_Settled_DuitCT_ARCH/volume" in texts
+    assert "CT NOT SETTLED AMOUNT - ARCH/RTP1/Incoming_NonSettled_QR_CT_ARCH/Amount" in texts
+    assert not any("OCT" in t or "2026" in t for t in texts)
+    # One line per copied cell: 16 files x volume and amount.
+    assert sum("ARCH/RTP1/" in t for t in texts) == 32
+    assert "TOTAL AE SETTLED AMOUNT - DUITNOW + RPPQR AE SETTLED AMOUNT" in texts
+    assert "GRAND TOTAL AMOUNT - TOTAL OUTGOING AMOUNT + TOTAL INCOMING AMOUNT" in texts
+
+
+def test_template_has_same_box():
+    from txn_report.report import TEMPLATE
+    ws = load_workbook(TEMPLATE).active
+    assert not any(c.comment for r in ws.iter_rows() for c in r)
+    assert not any(isinstance(c.value, str) and c.value.startswith("=")
+                   for r in ws.iter_rows() for c in r)
+    from txn_report.hints import source_box
+    expected = [t for left, right, _ in source_box() for t in (left, right) if t]
+    assert _texts(ws) == expected
 
 
 def test_no_hints_option(results_dir, tmp_path):
     assert main([str(results_dir), "-o", str(tmp_path), "--no-hints", "-q"]) == 0
     ws = load_workbook(next(tmp_path.glob("*.xlsx"))).active
-    assert not any(c.comment for r in ws.iter_rows() for c in r)
-    assert ws["B24"].value is None and ws["B25"].value is None
+    assert _texts(ws) == []
+    assert ws.max_row <= 24 or not ws.merged_cells.ranges or \
+        all(rng.max_row < 24 for rng in ws.merged_cells.ranges)

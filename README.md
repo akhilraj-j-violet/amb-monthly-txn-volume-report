@@ -29,25 +29,28 @@ The tool then:
    `TRANSACTION VOLUME - OCTOBER_2026`.
 5. Writes a log file for every run (see **Logs** below).
 
-### Notes explaining each number
-Every number in the report has an Excel note (hover over the cell; cells
-with a note show a small red triangle). The note says in plain words where
-the value comes from, for example:
+### DATA SOURCES box
+Under the table (from row 24) the report and the template have a bordered
+**DATA SOURCES** box saying where every number comes from. Outgoing is on the
+left and incoming on the right, like the table:
 
 ```
-Outgoing DuitNow, AE settled: number of transactions.
-
-Where it comes from:
-Folder: 01_Results > ARCH DB > RTP1
-File: Outgoing_Settled_DuitAE_OCT_2026_ARCH.xls
-Value: cell A2 (column 'Total Transaction').
+OUTGOING - DUITNOW
+AE SETTLED VOLUME - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/volume
+AE SETTLED AMOUNT - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/Amount
+CT SETTLED VOLUME - ARCH/RTP1/Outgoing_Settled_DuitCT_ARCH/volume
+...
+OUTGOING - TOTALS (added up by the report tool)
+TOTAL AE SETTLED VOLUME - DUITNOW + RPPQR AE SETTLED VOLUME
+...
+GRAND TOTAL VOLUME - TOTAL OUTGOING VOLUME + TOTAL INCOMING VOLUME
 ```
 
-Totals explain their sum instead, e.g. `DuitNow AE settled (D7) + RPPQR AE
-settled (D13)`. Two lines under the table (B24, B25) tell readers about the
-notes. Use `--no-hints` to leave the notes and these lines out, for example
-when sending the report to someone who doesn't need them. The note texts are
-written in `txn_report/hints.py`.
+File names are shown without the month and year, so the box is the same every
+month. `volume` is cell A2 and `Amount` is cell B2 of that file. The box is
+generated from the mapping in `txn_report/hints.py`, so it always matches what
+the tool does; edits made to the box in the template are replaced when a report
+is written. Use `--no-hints` to leave the box out.
 
 ### Calculations
 The values are read from the files as text and added with Python's `Decimal`
@@ -82,7 +85,7 @@ to see only warnings and errors there; the log file still gets everything.
 | `-m, --month` | Data month, e.g. `OCT_2026`, `2026-10`, `October 2026` |
 | `--allow-missing` | Build even if mapped files are missing (their cells stay blank) |
 | `--max-avg-amount` | Warn when amount ÷ volume is above this (default 1,000,000) |
-| `--no-hints` | Leave out the notes explaining where each number comes from |
+| `--no-hints` | Leave out the DATA SOURCES box under the table |
 | `--log-dir` | Folder for log files (default: `logs` inside the output folder) |
 | `--log-level` | Detail in the log file: `DEBUG` (default), `INFO` or `WARNING` |
 | `-q` | Console shows only warnings, errors and the output path |

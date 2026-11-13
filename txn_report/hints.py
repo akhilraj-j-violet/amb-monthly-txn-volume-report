@@ -1,112 +1,162 @@
-"""Plain-language notes explaining where every number in the report comes from.
+"""The "DATA SOURCES" box under the report table.
 
-Each value cell gets an Excel note (hover over the cell to read it; cells
-with a note show a small red triangle in the corner). A visible line under
-the table tells readers this. The same notes are put in the template, using
-``<MON>_<YYYY>`` in place of the month.
+A bordered box below the table lists where every number comes from, in the
+same style the user wrote the mapping, e.g.::
+
+    AE SETTLED VOLUME - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/volume
+
+File names are shown without the month and year, so the box is identical in
+the template and in every month's report. The text is generated from
+``SOURCES`` and ``CALCULATIONS`` in mapping.py, so it always matches what the
+tool actually does.
+
+Layout (outgoing on the left under B:D, incoming on the right under E:G,
+like the table above it)::
+
+    24        DATA SOURCES - where each number in the report comes from
+    25        OUTGOING - DUITNOW          | INCOMING - DUITNOW
+    26-33     8 lines                     | 8 lines
+    34        OUTGOING - RPPQR            | INCOMING - RPPQR
+    35-42     8 lines                     | 8 lines
+    43        OUTGOING - TOTALS           | INCOMING - TOTALS
+    44-53     10 lines                    | 10 lines
+    54        GRAND TOTAL
+    55-56     2 lines
 """
 
 from __future__ import annotations
 
-from openpyxl.comments import Comment
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Border, Font, Side
 
-from .mapping import AMOUNT_CELL, CALCULATIONS, SOURCES, VOLUME_CELL
+from .mapping import CALCULATIONS, SOURCES, VOLUME_COLUMNS
 
-AUTHOR = "Report tool"
-HINT_CELLS = ("B24", "B25")   # visible explanation lines under the table
-PLACEHOLDER = "<MON>_<YYYY>"
+FIRST_ROW = 24
+LEFT, RIGHT = ("B", "D"), ("E", "G")
+FONT_NAME = "Calibri Light"
 
-_SIDE = {"C": "Outgoing", "D": "Outgoing", "F": "Incoming", "G": "Incoming"}
-_WHAT = {"C": "number of transactions", "D": "total amount",
-         "F": "number of transactions", "G": "total amount"}
-_SECTION_ROWS = {7: "DuitNow", 8: "DuitNow", 9: "DuitNow", 10: "DuitNow",
-                 13: "RPPQR (DuitNow QR)", 14: "RPPQR (DuitNow QR)",
-                 15: "RPPQR (DuitNow QR)", 16: "RPPQR (DuitNow QR)"}
-_LINE = {7: "AE settled", 8: "CT settled", 9: "AE not settled", 10: "CT not settled",
-         13: "AE settled", 14: "CT settled", 15: "AE not settled", 16: "CT not settled",
-         17: "Total AE settled", 18: "Total CT settled",
-         19: "Total AE not settled", 20: "Total CT not settled"}
+_LINE = {7: "AE SETTLED", 8: "CT SETTLED", 9: "AE NOT SETTLED", 10: "CT NOT SETTLED",
+         13: "AE SETTLED", 14: "CT SETTLED", 15: "AE NOT SETTLED", 16: "CT NOT SETTLED",
+         17: "AE SETTLED", 18: "CT SETTLED", 19: "AE NOT SETTLED", 20: "CT NOT SETTLED"}
+_SIDE = {"C": "OUTGOING", "D": "OUTGOING", "F": "INCOMING", "G": "INCOMING"}
 
 
-def _row(ref: str) -> int:
-    return int(ref[1:])
+def _kind(ref: str) -> str:
+    return "VOLUME" if ref[0] in VOLUME_COLUMNS else "AMOUNT"
 
 
-def _short_name(ref: str) -> str:
-    """How a cell is called inside an explanation, e.g. 'DuitNow AE settled (C7)'."""
-    col, row = ref[0], _row(ref)
-    if row in _SECTION_ROWS:
-        section = "DuitNow" if row <= 10 else "RPPQR"
-        return f"{section} {_LINE[row]} ({ref})"
-    if row in (17, 18, 19, 20):
-        return f"{_LINE[row]} ({ref})"
+def _name(ref: str) -> str:
+    """What a report cell is called in the box, e.g. 'DUITNOW AE SETTLED VOLUME'."""
+    col, row = ref[0], int(ref[1:])
+    if row <= 10:
+        return f"DUITNOW {_LINE[row]} {_kind(ref)}"
+    if row <= 16:
+        return f"RPPQR {_LINE[row]} {_kind(ref)}"
+    if row <= 20:
+        return f"TOTAL {_LINE[row]} {_kind(ref)}"
     if row == 21:
-        return f"Total {_SIDE[col].lower()} ({ref})"
-    return ref
+        return f"TOTAL {_SIDE[col]} {_kind(ref)}"
+    return f"GRAND TOTAL {_kind(ref)}"
 
 
-def _title(ref: str) -> str:
-    col, row = ref[0], _row(ref)
-    what = _WHAT[col]
-    if row in _SECTION_ROWS:
-        return f"{_SIDE[col]} {_SECTION_ROWS[row]}, {_LINE[row]}: {what}."
-    if row in (17, 18, 19, 20):
-        return f"{_SIDE[col]} {_LINE[row]} (DuitNow + RPPQR): {what}."
+def _source_line(ref: str, source, kind: str) -> str:
+    db = source.db_folder.split()[0]                       # "ARCH DB" -> "ARCH"
+    file_name = source.file_name.replace("_{period}", "")  # no month / year
+    suffix = "volume" if kind == "VOLUME" else "Amount"   # as the user writes it
+    return f"{_LINE[int(ref[1:])]} {kind} - {db}/{source.product}/{file_name}/{suffix}"
+
+
+def _calc_line(target: str, sources: tuple[str, ...]) -> str:
+    row = int(target[1:])
     if row == 21:
-        return f"Total {_SIDE[col].lower()} (all lines added up): {what}."
-    return f"Grand total, outgoing + incoming: {what}."
+        return f"{_name(target)} - SUM OF THE 4 TOTAL {_kind(target)}S ABOVE"
+    if row <= 20:
+        # Short form so it fits the box: the two sources are always the same
+        # line in the DUITNOW and RPPQR sections.
+        assert [_name(s).split(" ", 1)[1] for s in sources] == \
+            [f"{_LINE[row]} {_kind(target)}"] * 2, sources
+        return f"{_name(target)} - DUITNOW + RPPQR {_LINE[row]} {_kind(target)}"
+    return f"{_name(target)} - " + " + ".join(_name(s) for s in sources)
 
 
-def hint_texts(period: str | None = None) -> dict[str, str]:
-    """Note text for every value cell. ``period`` like 'OCT_2026', or None for the template."""
-    month = period or PLACEHOLDER
-    notes: dict[str, str] = {}
-    for s in SOURCES:
-        for ref, src_cell, column in ((s.volume_cell, VOLUME_CELL, "Total Transaction"),
-                                      (s.amount_cell, AMOUNT_CELL, "Total Amount")):
-            notes[ref] = (
-                f"{_title(ref)}\n\n"
-                f"Where it comes from:\n"
-                f"Folder: 01_Results > {s.db_folder} > {s.product}\n"
-                f"File: {s.file_name.format(period=month)}.xls\n"
-                f"Value: cell {src_cell} (column '{column}').\n\n"
-                f"Copied into this report exactly as it is in the file."
+def source_box() -> list[tuple[str | None, str | None, str]]:
+    """Rows of the box as (left text, right text, style).
+
+    style is "title", "heading" or "line". A row with right text None spans
+    the full width (B:G).
+    """
+    rows: list[tuple[str | None, str | None, str]] = [
+        ("DATA SOURCES - where each number in the report comes from", None, "title")]
+
+    def side_lines(section_rows, side_cols):
+        out = []
+        for s in SOURCES:
+            if int(s.volume_cell[1:]) in section_rows and s.volume_cell[0] in side_cols:
+                out.append(_source_line(s.volume_cell, s, "VOLUME"))
+                out.append(_source_line(s.amount_cell, s, "AMOUNT"))
+        return out
+
+    for title, section_rows in (("DUITNOW", range(7, 11)), ("RPPQR", range(13, 17))):
+        rows.append((f"OUTGOING - {title}", f"INCOMING - {title}", "heading"))
+        left, right = side_lines(section_rows, "CD"), side_lines(section_rows, "FG")
+        rows += [(a, b, "line") for a, b in zip(left, right)]
+
+    rows.append(("OUTGOING - TOTALS (added up by the report tool)",
+                 "INCOMING - TOTALS (added up by the report tool)", "heading"))
+    left = [_calc_line(t, s) for t, s in CALCULATIONS if t[0] in "CD"]
+    right = [_calc_line(t, s) for t, s in CALCULATIONS if t[0] in "FG" and int(t[1:]) <= 21]
+    rows += [(a, b, "line") for a, b in zip(left, right)]
+
+    rows.append(("GRAND TOTAL (added up by the report tool)", None, "heading"))
+    rows += [(_calc_line(t, s), None, "line") for t, s in CALCULATIONS if int(t[1:]) == 22]
+    return rows
+
+
+def clear_below_table(ws) -> None:
+    """Remove anything from row FIRST_ROW down in B:G (old box, old tips, merges)."""
+    for rng in list(ws.merged_cells.ranges):
+        if rng.min_row >= FIRST_ROW:
+            ws.unmerge_cells(str(rng))
+    for row in ws.iter_rows(min_row=FIRST_ROW, max_row=max(ws.max_row, FIRST_ROW),
+                            min_col=2, max_col=7):
+        for c in row:
+            c.value = None
+            c.border = Border()
+            c.comment = None
+
+
+def remove_cell_notes(ws) -> None:
+    """Older versions put hover notes on the value cells; they are not wanted."""
+    for row in ws.iter_rows():
+        for c in row:
+            if c.comment is not None:   # merged cells never carry one
+                c.comment = None
+
+
+def write_source_box(ws) -> int:
+    """Draw the box under the table. Returns the number of rows used."""
+    clear_below_table(ws)
+    thin, medium = Side(style="thin"), Side(style="medium")
+    rows = source_box()
+    last = FIRST_ROW + len(rows) - 1
+    for i, (left, right, style) in enumerate(rows):
+        r = FIRST_ROW + i
+        spans = ([(LEFT[0], RIGHT[1], left)] if right is None
+                 else [(LEFT[0], LEFT[1], left), (RIGHT[0], RIGHT[1], right)])
+        for first, end, text in spans:
+            ws.merge_cells(f"{first}{r}:{end}{r}")
+            cell = ws[f"{first}{r}"]
+            cell.value = text
+            cell.font = Font(name=FONT_NAME, size=8 if style == "line" else 9,
+                             bold=style != "line")
+            cell.alignment = Alignment(horizontal="center" if style == "title" else "left",
+                                       vertical="center", indent=0 if style == "title" else 1)
+        # Borders: box outline, a line under title/headings, divider between sides.
+        for col in "BCDEFG":
+            c = ws[f"{col}{r}"]
+            c.border = Border(
+                left=medium if col == "B" else (thin if col == "E" and right is not None else None),
+                right=medium if col == "G" else (thin if col == "D" and right is not None else None),
+                top=medium if r == FIRST_ROW else (thin if style != "line" else None),
+                bottom=medium if r == last else (thin if style != "line" else None),
             )
-    for target, sources in CALCULATIONS:
-        parts = "\n + ".join(_short_name(r) for r in sources)
-        notes[target] = (
-            f"{_title(target)}\n\n"
-            f"How it is worked out:\n   {parts}\n\n"
-            f"Added up by the report tool (not an Excel formula)."
-        )
-    return notes
-
-
-def apply_hints(ws, period: str | None = None) -> None:
-    """Put the notes on the value cells and the explanation lines under the table."""
-    for ref, text in hint_texts(period).items():
-        lines = text.count("\n") + 1
-        longest = max(len(line) for line in text.split("\n"))
-        note = Comment(text, AUTHOR)
-        note.width = max(260, min(560, longest * 6.5))
-        note.height = 20 + lines * 15
-        ws[ref].comment = note
-
-    source = (f"the {period} extract files" if period
-              else "that month's extract files")
-    ws[HINT_CELLS[0]] = ("Tip: hover over any number (cells with a small red triangle) "
-                         "to see where it comes from.")
-    ws[HINT_CELLS[1]] = (f"Rows 7-16 are copied from {source} in "
-                         "01_Results > ARCH DB > RTP1. Rows 17-22 are totals "
-                         "added up by the report tool.")
-    for ref in HINT_CELLS:
-        ws[ref].font = Font(name="Calibri Light", italic=True, size=8, color="595959")
-
-
-def remove_hints(ws) -> None:
-    """Strip notes and explanation lines (used for --no-hints)."""
-    for ref in hint_texts():
-        ws[ref].comment = None
-    for ref in HINT_CELLS:
-        ws[ref] = None
+    return len(rows)

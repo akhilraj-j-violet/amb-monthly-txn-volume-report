@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 
 from .mapping import (AMOUNT_CELL, CALCULATIONS, SOURCES, TOTAL_LABELS,
                       VOLUME_CELL, VOLUME_COLUMNS, Source)
-from .hints import apply_hints, remove_hints
+from .hints import clear_below_table, remove_cell_notes, write_source_box
 from .reader import cell_value, read_sheet, to_number
 
 log = logging.getLogger("txn_report")
@@ -266,11 +266,12 @@ def write_report(values: pd.DataFrame, cells: dict[str, Decimal], period: str,
                         "display %s. Exact value: %s", ref, digits, EXCEL_DIGITS,
                         f"{float(f'{value:.{EXCEL_DIGITS}g}'):,.2f}", f"{value:,}")
 
+    remove_cell_notes(ws)
     if hints:
-        apply_hints(ws, period)
-        log.info("Added source notes to the value cells")
+        n = write_source_box(ws)
+        log.info("Added the DATA SOURCES box under the table (%d rows)", n)
     else:
-        remove_hints(ws)
+        clear_below_table(ws)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)

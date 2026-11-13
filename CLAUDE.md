@@ -151,14 +151,18 @@ Calculations: rows 17–20 = DUITNOW + RPPQR (e.g. C17 = C7+C13); row 21 = sum
 of rows 17–20; F22 = C21+F21; G22 = D21+G21. The user's written mapping said
 `G22 = D21+G22`, which would be circular; D21+G21 is used.
 
-## Source notes (user request)
-Every value cell (32 copied cells + 22 totals) gets a plain-language Excel note
-saying where its value comes from (folder, file, cell A2/B2) or how it is
-added up. Texts are generated from `SOURCES`/`CALCULATIONS` in
-`txn_report/hints.py`, so they stay correct if the mapping changes. B24/B25
-hold a visible tip line. The template carries the same notes with
-`<MON>_<YYYY>`; the report gets the real month. `--no-hints` removes them.
-The template no longer contains formulas (cleared after the user's upload).
+## DATA SOURCES box (user request)
+The user does **not** want Excel cell comments/notes. Instead a bordered
+"DATA SOURCES" box under the table (rows 24-56, B:D outgoing, E:G incoming)
+lists every number's source in the user's format, with **no month/year in the
+file names**:
+`AE SETTLED VOLUME - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/volume`
+`AE SETTLED AMOUNT - ARCH/RTP1/Outgoing_Settled_DuitAE_ARCH/Amount`
+(`volume` lowercase, `Amount` capitalised, as the user wrote it), then the
+totals (`TOTAL AE SETTLED VOLUME - DUITNOW + RPPQR AE SETTLED VOLUME`, ...) and
+the grand total. Generated from `SOURCES`/`CALCULATIONS` in
+`txn_report/hints.py`; the same box is saved in the template and rewritten in
+every report. `--no-hints` leaves it out. Any leftover cell comments are removed.
 
 The template footer `# Classified as Confidential` comes from the user's
 template (a sensitivity label); keep it.
